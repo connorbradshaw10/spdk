@@ -852,8 +852,8 @@ spdk_bdev_register(struct spdk_bdev *vbdev)
 	return 0;
 }
 
-void
-spdk_bdev_module_examine_done(struct spdk_bdev_module *module)
+static void
+vbdev_examine_complete(void *cb_arg, struct spdk_lvol_store *lvs, int lvolerrno)
 {
 	SPDK_CU_ASSERT_FATAL(g_examine_done != true);
 	g_examine_done = true;

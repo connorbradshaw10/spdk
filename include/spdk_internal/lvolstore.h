@@ -134,6 +134,8 @@ void spdk_lvol_resize(struct spdk_lvol *lvol, uint64_t sz, spdk_lvol_op_complete
 
 void spdk_lvol_set_read_only(struct spdk_lvol *lvol, spdk_lvol_op_complete cb_fn,
 			     void *cb_arg);
+int vbdev_lvs_examine(struct spdk_bdev *bdev,
+		      spdk_lvs_op_with_handle_complete cb_fn, void *cb_arg);
 
 int spdk_lvs_esnap_missing_add(struct spdk_lvol_store *lvs, struct spdk_lvol *lvol,
 			       const void *esnap_id, uint32_t id_len);

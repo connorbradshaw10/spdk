@@ -1818,6 +1818,7 @@ _vbdev_lvs_examine_cb(void *arg, struct spdk_lvol_store *lvol_store, int lvserrn
 	}
 
 end:
+	req->cb_fn(req->cb_arg, lvol_store, lvserrno);
 	free(req);
 }
 
@@ -1842,7 +1843,7 @@ _vbdev_lvs_examine(struct spdk_bdev *bdev, struct spdk_lvs_req *ori_req,
 		SPDK_INFOLOG(vbdev_lvol, "Cannot create bs dev on %s\n", bdev->name);
 		_vbdev_lvs_examine_done(ori_req, rc);
 		free(req);
-		return;
+		return -1;
 	}
 
 	req->base_bdev = bdev;
