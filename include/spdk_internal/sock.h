@@ -44,6 +44,7 @@ struct spdk_sock {
 	int				cb_cnt;
 	spdk_sock_cb			cb_fn;
 	void				*cb_arg;
+	uint32_t			zerocopy_threshold;
 	struct {
 		uint8_t		closed		: 1;
 		uint8_t		reserved	: 7;

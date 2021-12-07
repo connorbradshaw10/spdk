@@ -2024,10 +2024,6 @@ posix_sock_update_mark(struct spdk_sock_group_impl *_group, struct spdk_sock *_s
 	}
 }
 
-<<<<<<< HEAD
-=======
-
->>>>>>> b080e7733 (Merged PR 9897186: Initial changes to ensure non blocking connect)
 static bool
 posix_sock_is_ready(int fd)
 {
@@ -2053,10 +2049,6 @@ posix_sock_group_impl_add_sock(struct spdk_sock_group_impl *_group, struct spdk_
 		return 0;
 	}
 
-<<<<<<< HEAD
-=======
-
->>>>>>> b080e7733 (Merged PR 9897186: Initial changes to ensure non blocking connect)
 #if defined(SPDK_EPOLL)
 	struct epoll_event event;
 
