@@ -897,6 +897,7 @@ buses managed by the VMD driver and hotplugs all newfound devices.
 
 A new option `ack_timeout` was added to the `spdk_sock_opts` structure.
 
+<<<<<<< HEAD
 ### util
 
 A new parameter `bounce_iovcnt` was added to `spdk_dif_generate_copy` and `spdk_dif_verify_copy`.
@@ -1045,6 +1046,9 @@ Introduced `zerocopy_threshold` to enable zerocopy on send for server sockets ac
 data size to be flushed.
 
 ## v22.01
+=======
+## v22.01: NVMe multipath, NVMe TCP zero-copy, NVMe-oF discovery service
+>>>>>>> de4972ead (sock: Add ack_timeout to spdk_sock_opts)
 
 ### bdev_uring
 
