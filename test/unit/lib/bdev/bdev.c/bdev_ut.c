@@ -7586,6 +7586,7 @@ main(int argc, char **argv)
 	CU_ADD_TEST(suite, bdev_compare_and_write);
 	CU_ADD_TEST(suite, bdev_compare);
 	CU_ADD_TEST(suite, bdev_compare_emulated);
+	CU_ADD_TEST(suite, bdev_io_range_overlaps_submitted_io);
 	CU_ADD_TEST(suite, bdev_zcopy_write);
 	CU_ADD_TEST(suite, bdev_zcopy_read);
 	CU_ADD_TEST(suite, bdev_open_while_hotremove);
