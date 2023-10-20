@@ -2041,6 +2041,14 @@ nvmf_tcp_req_set_cpl(struct spdk_nvmf_tcp_req *treq, int sct, int sc)
 	treq->req.rsp->nvme_cpl.cid = treq->req.cmd->nvme_cmd.cid;
 }
 
+static inline void
+nvmf_tcp_req_set_cpl(struct spdk_nvmf_tcp_req *treq, int sct, int sc)
+{
+	treq->req.rsp->nvme_cpl.status.sct = sct;
+	treq->req.rsp->nvme_cpl.status.sc = sc;
+	treq->req.rsp->nvme_cpl.cid = treq->req.cmd->nvme_cmd.cid;
+}
+
 static void
 data_crc32_calc_done(void *cb_arg, int status)
 {
