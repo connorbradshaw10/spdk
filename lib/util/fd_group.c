@@ -53,6 +53,9 @@ struct spdk_fd_group {
 
 	/* interrupt sources list */
 	TAILQ_HEAD(, event_handler) event_handlers;
+
+	/* removed interrupt sources list */
+	TAILQ_HEAD(, event_handler) removed_handlers;
 };
 
 int
@@ -321,12 +324,8 @@ spdk_fd_group_remove(struct spdk_fd_group *fgrp, int efd)
 	fgrp->num_fds--;
 	TAILQ_REMOVE(&fgrp->event_handlers, ehdlr, next);
 
-	/* Delay ehdlr's free in case it is waiting for execution in fgrp wait loop */
-	if (ehdlr->state == EVENT_HANDLER_STATE_RUNNING) {
-		ehdlr->state = EVENT_HANDLER_STATE_REMOVED;
-	} else {
-		free(ehdlr);
-	}
+	ehdlr->state = EVENT_HANDLER_STATE_REMOVED;
+	TAILQ_INSERT_TAIL(&fgrp->removed_handlers, ehdlr, next);
 }
 
 int
@@ -381,8 +380,9 @@ spdk_fd_group_create(struct spdk_fd_group **_egrp)
 		return -ENOMEM;
 	}
 
-	/* init the event source head */
+	/* init the event source and removed events heads */
 	TAILQ_INIT(&fgrp->event_handlers);
+	TAILQ_INIT(&fgrp->removed_handlers);
 
 	fgrp->num_fds = 0;
 	fgrp->epfd = epoll_create1(EPOLL_CLOEXEC);
@@ -399,10 +399,19 @@ spdk_fd_group_create(struct spdk_fd_group **_egrp)
 void
 spdk_fd_group_destroy(struct spdk_fd_group *fgrp)
 {
+	struct event_handler *ehdlr, *ptmp;
+
 	if (fgrp == NULL || fgrp->num_fds > 0) {
 		SPDK_ERRLOG("Invalid fd_group(%p) to destroy.\n", fgrp);
 		assert(0);
 		return;
+	}
+
+	/* Free any remaining ehdlrs that were removed.
+	 */
+	TAILQ_FOREACH_SAFE(ehdlr, &fgrp->removed_handlers, next, ptmp) {
+		TAILQ_REMOVE(&fgrp->removed_handlers, ehdlr, next);
+		free(ehdlr);
 	}
 
 	close(fgrp->epfd);
@@ -416,7 +425,7 @@ spdk_fd_group_wait(struct spdk_fd_group *fgrp, int timeout)
 {
 	int totalfds = fgrp->num_fds;
 	struct epoll_event events[totalfds];
-	struct event_handler *ehdlr;
+	struct event_handler *ehdlr, *ptmp;
 	int n;
 	int nfds;
 
@@ -450,11 +459,13 @@ spdk_fd_group_wait(struct spdk_fd_group *fgrp, int timeout)
 			continue;
 		}
 
-		/* Tag ehdlr as running state in case that it is removed
-		 * during this wait loop but before or when it get executed.
+		/* Tag ehdlr as running state unless it has already been
+		 * removed.
 		 */
-		assert(ehdlr->state == EVENT_HANDLER_STATE_WAITING);
-		ehdlr->state = EVENT_HANDLER_STATE_RUNNING;
+		if (ehdlr->state != EVENT_HANDLER_STATE_REMOVED) {
+			assert(ehdlr->state == EVENT_HANDLER_STATE_WAITING);
+			ehdlr->state = EVENT_HANDLER_STATE_RUNNING;
+		}
 	}
 
 	for (n = 0; n < nfds; n++) {
@@ -465,11 +476,10 @@ spdk_fd_group_wait(struct spdk_fd_group *fgrp, int timeout)
 			continue;
 		}
 
-		/* It is possible that the ehdlr was removed
-		 * during this wait loop but before it get executed.
+		/* It is possible that the ehdlr was removed prior to or
+		 * during this wait loop but before it gets executed.
 		 */
 		if (ehdlr->state == EVENT_HANDLER_STATE_REMOVED) {
-			free(ehdlr);
 			continue;
 		}
 
@@ -481,11 +491,16 @@ spdk_fd_group_wait(struct spdk_fd_group *fgrp, int timeout)
 		/* It is possible that the ehdlr was removed
 		 * during this wait loop when it get executed.
 		 */
-		if (ehdlr->state == EVENT_HANDLER_STATE_REMOVED) {
-			free(ehdlr);
-		} else {
+		if (ehdlr->state != EVENT_HANDLER_STATE_REMOVED) {
 			ehdlr->state = EVENT_HANDLER_STATE_WAITING;
 		}
+	}
+
+	/* Free ehdlrs that were removed during this wait loop.
+	 */
+	TAILQ_FOREACH_SAFE(ehdlr, &fgrp->removed_handlers, next, ptmp) {
+		TAILQ_REMOVE(&fgrp->removed_handlers, ehdlr, next);
+		free(ehdlr);
 	}
 
 	return nfds;
