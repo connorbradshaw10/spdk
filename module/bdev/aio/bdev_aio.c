@@ -201,7 +201,25 @@ bdev_aio_submit_io(enum spdk_bdev_io_type type, struct file_disk *fdisk,
 	aio_task->len = nbytes;
 	aio_task->ch = aio_ch;
 
+<<<<<<< HEAD
 	return io_submit(aio_ch->io_ctx, 1, &iocb);
+=======
+	SPDK_DEBUGLOG(aio, "read %d iovs size %lu to off: %#lx\n",
+		      iovcnt, nbytes, offset);
+
+	rc = io_submit(aio_ch->io_ctx, 1, &iocb);
+	if (spdk_unlikely(rc < 0)) {
+		if (rc == -EAGAIN) {
+			SPDK_DEBUGLOG(aio, "io_submit returned -EAGAIN\n");
+			spdk_bdev_io_complete(spdk_bdev_io_from_ctx(aio_task), SPDK_BDEV_IO_STATUS_NOMEM);
+		} else {
+			spdk_bdev_io_complete_aio_status(spdk_bdev_io_from_ctx(aio_task), rc);
+			SPDK_ERRLOG("%s: io_submit returned %d\n", __func__, rc);
+		}
+	} else {
+		aio_ch->io_inflight++;
+	}
+>>>>>>> ff7944645 (lib/bdev: Fix nomem IO hang)
 }
 #endif
 
@@ -224,6 +242,7 @@ bdev_aio_rw(enum spdk_bdev_io_type type, struct file_disk *fdisk,
 	rc = bdev_aio_submit_io(type, fdisk, ch, aio_task, iov, iovcnt, nbytes, offset);
 	if (spdk_unlikely(rc < 0)) {
 		if (rc == -EAGAIN) {
+			SPDK_DEBUGLOG(aio, "io_submit returned -EAGAIN\n");
 			spdk_bdev_io_complete(spdk_bdev_io_from_ctx(aio_task), SPDK_BDEV_IO_STATUS_NOMEM);
 		} else {
 			spdk_bdev_io_complete_aio_status(spdk_bdev_io_from_ctx(aio_task), rc);
@@ -450,10 +469,15 @@ bdev_aio_io_channel_poll(struct bdev_aio_io_channel *io_ch)
 			 * But from libaio.h, io_event.res is defined unsigned long, so
 			 * convert it to signed value for error detection.
 			 */
-			SPDK_ERRLOG("failed to complete aio: rc %"PRId64"\n", events[i].res);
 			res = (int)events[i].res;
 			if (res < 0) {
-				spdk_bdev_io_complete_aio_status(spdk_bdev_io_from_ctx(aio_task), res);
+				if (res == -EAGAIN) {
+					SPDK_DEBUGLOG(aio, "io_getevents returned -EAGAIN\n");
+					spdk_bdev_io_complete(spdk_bdev_io_from_ctx(aio_task), SPDK_BDEV_IO_STATUS_NOMEM);
+				} else {
+					SPDK_ERRLOG("failed to complete aio: rc %"PRId64"\n", events[i].res);
+					spdk_bdev_io_complete_aio_status(spdk_bdev_io_from_ctx(aio_task), res);
+				}
 			} else {
 				spdk_bdev_io_complete(spdk_bdev_io_from_ctx(aio_task), SPDK_BDEV_IO_STATUS_FAILED);
 			}
