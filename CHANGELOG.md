@@ -1046,6 +1046,11 @@ data size to be flushed.
 
 ## v22.01
 
+### bdev_uring
+
+Added `bdev_uring_rescan` RPC to allow rescaning the size of uring bdev. backported
+from v24.05, commit d62e9b746390eb9b1d2d3eca22f52b9205cb089a from branch `main`
+
 ### accel
 
 The batching capability was removed. Batching is now considered an implementation

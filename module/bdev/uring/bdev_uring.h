@@ -28,4 +28,6 @@ void delete_uring_bdev(const char *name, spdk_delete_uring_complete cb_fn, void 
 
 int bdev_uring_rescan(const char *name);
 
+int bdev_uring_rescan(const char *name);
+
 #endif /* SPDK_BDEV_URING_H */
