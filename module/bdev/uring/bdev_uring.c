@@ -257,7 +257,8 @@ bdev_uring_reap(struct io_uring *ring, int max)
 		}
 
 		uring_task = (struct bdev_uring_task *)cqe->user_data;
-		if (cqe->res != (signed)uring_task->len) {
+		if (spdk_unlikely(cqe->res != (signed)uring_task->len)) {
+			SPDK_ERRLOG("I/O failed with error %d\n", cqe->res);
 			status = SPDK_BDEV_IO_STATUS_FAILED;
 		} else {
 			status = SPDK_BDEV_IO_STATUS_SUCCESS;
@@ -312,7 +313,8 @@ bdev_uring_get_buf_cb(struct spdk_io_channel *ch, struct spdk_bdev_io *bdev_io,
 {
 	int64_t ret = 0;
 
-	if (!success) {
+	if (spdk_unlikely(!success)) {
+		SPDK_ERRLOG("Failed to get buffer\n");
 		spdk_bdev_io_complete(bdev_io, SPDK_BDEV_IO_STATUS_FAILED);
 		return;
 	}
