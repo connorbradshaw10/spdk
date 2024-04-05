@@ -249,7 +249,10 @@ bdev_uring_reap(struct io_uring *ring, int max)
 	for (i = 0; i < max; i++) {
 		ret = io_uring_peek_cqe(ring, &cqe);
 		if (ret != 0) {
-			return ret;
+			if (spdk_unlikely(ret != -EAGAIN)) {
+				SPDK_ERRLOG("io_uring_peek_cqe failed with error %d\n", ret);
+			}
+			return count;
 		}
 
 		if (cqe == NULL) {
