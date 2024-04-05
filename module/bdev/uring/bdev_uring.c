@@ -261,8 +261,13 @@ bdev_uring_reap(struct io_uring *ring, int max)
 
 		uring_task = (struct bdev_uring_task *)cqe->user_data;
 		if (spdk_unlikely(cqe->res != (signed)uring_task->len)) {
-			SPDK_ERRLOG("I/O failed with error %d\n", cqe->res);
-			status = SPDK_BDEV_IO_STATUS_FAILED;
+			if (cqe->res != -EAGAIN) {
+				SPDK_ERRLOG("I/O failed with error %d\n", cqe->res);
+				status = SPDK_BDEV_IO_STATUS_FAILED;
+			} else {
+				SPDK_DEBUGLOG(uring, "I/O failed with error EAGAIN - requeuing\n");
+				status = SPDK_BDEV_IO_STATUS_NOMEM;
+			}
 		} else {
 			status = SPDK_BDEV_IO_STATUS_SUCCESS;
 		}
