@@ -222,6 +222,29 @@ bdev_uring_writev(struct bdev_uring *uring, struct spdk_io_channel *ch,
 }
 
 static int
+bdev_uring_flush(struct bdev_uring *uring, struct spdk_io_channel *ch,
+			struct bdev_uring_task *uring_task)
+{
+	struct bdev_uring_io_channel *uring_ch = spdk_io_channel_get_ctx(ch);
+	struct bdev_uring_group_channel *group_ch = uring_ch->group_ch;
+	struct io_uring_sqe *sqe;
+	sqe = io_uring_get_sqe(&group_ch->uring);
+	if (!sqe) {
+		SPDK_ERRLOG("Failed to get sqe to perform flush operation");
+		return -ENOMEM;
+	}
+	// Note: Flag 0 indicates fsync operation on fd, if specific range of sync
+	// is required then use io_uring_prep_sync_file_range to prepare sync_file_range
+	// request.
+	io_uring_prep_fsync(sqe, uring->fd, 0);
+	io_uring_sqe_set_data(sqe, uring_task);
+	uring_task->len = 0;
+	uring_task->ch = uring_ch;
+	group_ch->io_pending++;
+	return 0;
+}
+
+static int
 bdev_uring_destruct(void *ctx)
 {
 	struct bdev_uring *uring = ctx;
@@ -671,6 +694,14 @@ _bdev_uring_submit_request(struct spdk_io_channel *ch, struct spdk_bdev_io *bdev
 		spdk_bdev_io_get_buf(bdev_io, bdev_uring_get_buf_cb,
 				     bdev_io->u.bdev.num_blocks * bdev_io->bdev->blocklen);
 		return 0;
+	case SPDK_BDEV_IO_TYPE_FLUSH:
+		int rc = bdev_uring_flush((struct bdev_uring *)bdev_io->bdev->ctxt,
+					ch, (struct bdev_uring_task *)bdev_io->driver_ctx);
+		if (rc == -ENOMEM) {
+			spdk_bdev_io_complete(bdev_io, SPDK_BDEV_IO_STATUS_NOMEM);
+			return 0;
+		}
+		return rc;
 	default:
 		return -1;
 	}
@@ -694,6 +725,7 @@ bdev_uring_io_type_supported(void *ctx, enum spdk_bdev_io_type io_type)
 #endif
 	case SPDK_BDEV_IO_TYPE_READ:
 	case SPDK_BDEV_IO_TYPE_WRITE:
+	case SPDK_BDEV_IO_TYPE_FLUSH:
 		return true;
 	default:
 		return false;

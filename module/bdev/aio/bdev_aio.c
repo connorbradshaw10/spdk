@@ -256,12 +256,15 @@ bdev_aio_rw(enum spdk_bdev_io_type type, struct file_disk *fdisk,
 static void
 bdev_aio_flush(struct file_disk *fdisk, struct bdev_aio_task *aio_task)
 {
+	struct spdk_bdev_io *bdev_io = spdk_bdev_io_from_ctx(aio_task);
 	int rc = fsync(fdisk->fd);
 
 	if (rc == 0) {
-		spdk_bdev_io_complete(spdk_bdev_io_from_ctx(aio_task), SPDK_BDEV_IO_STATUS_SUCCESS);
+		spdk_bdev_io_complete(bdev_io, SPDK_BDEV_IO_STATUS_SUCCESS);
 	} else {
-		spdk_bdev_io_complete_aio_status(spdk_bdev_io_from_ctx(aio_task), -errno);
+		SPDK_ERRLOG("Failed to perform fsync on bdev %s returned %d errno: %d\n",
+			bdev_io->bdev->name, rc, errno);
+		spdk_bdev_io_complete_aio_status(bdev_io, -errno);
 	}
 }
 
