@@ -367,6 +367,9 @@ _sock(const char *ip, int port, char *impl_name)
 
 	server_sock = spdk_sock_accept(listen_sock);
 	SPDK_CU_ASSERT_FATAL(server_sock != NULL);
+	if (strcmp(impl_name, "posix")) {
+		CU_ASSERT(spdk_sock_is_connected(client_sock) == true);
+	}
 	CU_ASSERT(spdk_sock_is_connected(client_sock) == true);
 	CU_ASSERT(spdk_sock_is_connected(server_sock) == true);
 

@@ -1431,6 +1431,9 @@ _sock_check_zcopy(struct spdk_sock *sock)
 static int posix_sock_connect_poll(struct spdk_posix_sock *sock);
 
 static int
+posix_sock_connect_poll(struct spdk_posix_sock *sock);
+
+static int
 _sock_flush(struct spdk_sock *sock)
 {
 	struct spdk_posix_sock *psock = __posix_sock(sock);
@@ -1445,6 +1448,10 @@ _sock_flush(struct spdk_sock *sock)
 	unsigned int offset;
 	size_t len;
 	bool is_zcopy = false;
+
+	if (posix_sock_is_connecting(psock)) {
+		return posix_sock_connect_poll(psock);
+	}
 
 	if (posix_sock_is_connecting(psock)) {
 		return posix_sock_connect_poll(psock);
@@ -1861,6 +1868,10 @@ posix_sock_is_ipv4(struct spdk_sock *_sock)
 		return false;
 	}
 
+	if (posix_sock_is_connecting(sock)) {
+		return false;
+	}
+
 	return (sa.ss_family == AF_INET);
 }
 
@@ -2013,6 +2024,10 @@ posix_sock_update_mark(struct spdk_sock_group_impl *_group, struct spdk_sock *_s
 	}
 }
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> b080e7733 (Merged PR 9897186: Initial changes to ensure non blocking connect)
 static bool
 posix_sock_is_ready(int fd)
 {
@@ -2038,6 +2053,10 @@ posix_sock_group_impl_add_sock(struct spdk_sock_group_impl *_group, struct spdk_
 		return 0;
 	}
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> b080e7733 (Merged PR 9897186: Initial changes to ensure non blocking connect)
 #if defined(SPDK_EPOLL)
 	struct epoll_event event;
 
