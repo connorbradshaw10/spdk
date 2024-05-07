@@ -2137,6 +2137,9 @@ posix_sock_connect_poll(struct spdk_posix_sock *sock)
 		return -1;
 	}
 
+	// Set inprogress to false whether the connection is successful or not
+	sock->conn_ctx.inprogress = false;
+
 	if (connect_error) {
 		close(sock->fd);
 		SPDK_ERRLOG("connect() failed, errno = %d\n", connect_error);
