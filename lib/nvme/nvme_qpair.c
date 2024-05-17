@@ -952,10 +952,12 @@ _nvme_qpair_submit_request(struct spdk_nvme_qpair *qpair, struct nvme_request *r
 	if (spdk_unlikely(nvme_qpair_get_state(qpair) == NVME_QPAIR_DISCONNECTED ||
 			  nvme_qpair_get_state(qpair) == NVME_QPAIR_DISCONNECTING ||
 			  nvme_qpair_get_state(qpair) == NVME_QPAIR_DESTROYING)) {
-		TAILQ_FOREACH_SAFE(child_req, &req->children, child_tailq, tmp) {
-			nvme_request_remove_child(req, child_req);
-			nvme_request_free_children(child_req);
-			nvme_free_request(child_req);
+		if (req->num_children) {
+			TAILQ_FOREACH_SAFE(child_req, &req->children, child_tailq, tmp) {
+				nvme_request_remove_child(req, child_req);
+				nvme_request_free_children(child_req);
+				nvme_free_request(child_req);
+			}
 		}
 
 		rc = -ENXIO;
