@@ -1833,6 +1833,15 @@ int spdk_bdev_quiesce_range(struct spdk_bdev *bdev, struct spdk_bdev_module *mod
 int spdk_bdev_unquiesce_range(struct spdk_bdev *bdev, struct spdk_bdev_module *module,
 			      uint64_t offset, uint64_t length,
 			      spdk_bdev_quiesce_cb cb_fn, void *cb_arg);
+/**
+ * Checks whether FUA bit is enabled or disabled for given write
+*/
+bool spdk_bdev_io_get_fua(struct spdk_bdev_io *bdev_io);
+
+/**
+ * Return spdk_bdev_ext_io_opts by building from given bdev_io
+*/
+struct spdk_bdev_ext_io_opts spdk_bdev_io_build_ext_opts(struct spdk_bdev_io *bdev_io);
 
 /*
  *  Macro used to register module for later initialization.

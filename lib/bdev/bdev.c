@@ -448,6 +448,9 @@ bdev_ch_remove_from_io_submitted(struct spdk_bdev_io *bdev_io)
 	bdev_io->internal.ch->queue_depth--;
 }
 
+#define bdev_get_ext_io_opt(opts, field, defval) \
+	((opts) != NULL ? SPDK_GET_FIELD(opts, field, defval) : (defval))
+
 void
 spdk_bdev_get_opts(struct spdk_bdev_opts *opts, size_t opts_size)
 {
@@ -10520,6 +10523,18 @@ spdk_bdev_copy_blocks(struct spdk_bdev_desc *desc, struct spdk_io_channel *ch,
 	spdk_bdev_io_get_buf(bdev_io, bdev_copy_get_buf_cb, num_blocks * spdk_bdev_get_block_size(bdev));
 
 	return 0;
+bool
+spdk_bdev_io_get_fua(struct spdk_bdev_io *bdev_io) {
+	return (bdev_io->u.bdev.nvme_cdw12.raw & SPDK_NVME_IO_FLAGS_FORCE_UNIT_ACCESS) ? true : false;
+}
+
+struct spdk_bdev_ext_io_opts spdk_bdev_io_build_ext_opts(struct spdk_bdev_io *bdev_io) {
+	struct spdk_bdev_ext_io_opts opts =  {
+		.size = SPDK_SIZEOF(&opts, nvme_cdw13),
+		.nvme_cdw12 = bdev_io->u.bdev.nvme_cdw12,
+		.nvme_cdw13 = bdev_io->u.bdev.nvme_cdw13,
+	};
+	return opts;
 }
 
 SPDK_LOG_REGISTER_COMPONENT(bdev)
