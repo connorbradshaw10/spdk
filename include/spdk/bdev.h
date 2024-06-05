@@ -323,7 +323,7 @@ struct spdk_bdev_ext_io_opts {
 	union spdk_bdev_nvme_cdw12 nvme_cdw12;
 	/** defined by \ref spdk_bdev_nvme_cdw13 */
 	union spdk_bdev_nvme_cdw13 nvme_cdw13;
-} __attribute__((packed));
+};
 SPDK_STATIC_ASSERT(sizeof(struct spdk_bdev_ext_io_opts) == 60, "Incorrect size");
 
 /**
