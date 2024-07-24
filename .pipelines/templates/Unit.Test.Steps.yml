@@ -1,0 +1,31 @@
+steps:
+  - task: PipAuthenticate@1
+    displayName: 'Pip Authenticate'
+    inputs:
+      artifactFeeds: 'One/AzureNativeContainerStorage_PublicPackages'
+
+  - task: Bash@3
+    displayName: 'Run Unit Tests'
+    inputs:
+      targetType: 'inline'
+      script: |
+        set -x
+        export WorkingDirectory=$(Build.SourcesDirectory)
+        export LoggingDirectory=$(Build.SourcesDirectory)/logs
+        $(Build.SourcesDirectory)/.pipelines/templates/scripts/run-unit-tests.sh
+
+  - task: PublishTestResults@2
+    displayName: 'Publish Test Results'
+    condition: succeededOrFailed()
+    inputs:
+      testRunner: JUnit
+      testResultsFiles: $(Build.SourcesDirectory)/logs/JUnit.xml
+      failTaskOnFailedTests: true
+
+  - task: PublishCodeCoverageResults@2
+    displayName: 'Publish Code Coverage Results'
+    condition: succeededOrFailed()
+    inputs:
+      pathToSources: $(Build.SourcesDirectory)
+      summaryFileLocation: $(Build.SourcesDirectory)/out/Cobertura.xml
+      failIfCoverageEmpty: false
