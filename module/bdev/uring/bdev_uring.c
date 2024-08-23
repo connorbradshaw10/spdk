@@ -197,7 +197,8 @@ bdev_uring_readv(struct bdev_uring *uring, struct spdk_io_channel *ch,
 static int64_t
 bdev_uring_writev(struct bdev_uring *uring, struct spdk_io_channel *ch,
 		  struct bdev_uring_task *uring_task,
-		  struct iovec *iov, int iovcnt, size_t nbytes, uint64_t offset)
+		  struct iovec *iov, int iovcnt, size_t nbytes, uint64_t offset,
+		  bool sync_io)
 {
 	struct bdev_uring_io_channel *uring_ch = spdk_io_channel_get_ctx(ch);
 	struct bdev_uring_group_channel *group_ch = uring_ch->group_ch;
@@ -209,7 +210,12 @@ bdev_uring_writev(struct bdev_uring *uring, struct spdk_io_channel *ch,
 		return -ENOMEM;
 	}
 
-	io_uring_prep_writev(sqe, uring->fd, iov, iovcnt, offset);
+	if (sync_io) {
+		io_uring_prep_writev2(sqe, uring->fd, iov, iovcnt, offset, RWF_DSYNC);
+	} else {
+		io_uring_prep_writev(sqe, uring->fd, iov, iovcnt, offset);
+	}
+
 	io_uring_sqe_set_data(sqe, uring_task);
 	uring_task->len = nbytes;
 	uring_task->ch = uring_ch;
@@ -361,13 +367,15 @@ bdev_uring_get_buf_cb(struct spdk_io_channel *ch, struct spdk_bdev_io *bdev_io,
 				       bdev_io->u.bdev.offset_blocks * bdev_io->bdev->blocklen);
 		break;
 	case SPDK_BDEV_IO_TYPE_WRITE:
+		bool sync_io = spdk_bdev_io_get_fua(bdev_io);
 		ret = bdev_uring_writev((struct bdev_uring *)bdev_io->bdev->ctxt,
 					ch,
 					(struct bdev_uring_task *)bdev_io->driver_ctx,
 					bdev_io->u.bdev.iovs,
 					bdev_io->u.bdev.iovcnt,
 					bdev_io->u.bdev.num_blocks * bdev_io->bdev->blocklen,
-					bdev_io->u.bdev.offset_blocks * bdev_io->bdev->blocklen);
+					bdev_io->u.bdev.offset_blocks * bdev_io->bdev->blocklen,
+					sync_io);
 		break;
 	default:
 		SPDK_ERRLOG("Wrong io type\n");

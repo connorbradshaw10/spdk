@@ -22,6 +22,7 @@
 #include "spdk/log.h"
 
 #include <sys/eventfd.h>
+#include <linux/aio_abi.h>
 
 #ifndef __FreeBSD__
 #include <libaio.h>
@@ -183,7 +184,8 @@ bdev_aio_submit_io(enum spdk_bdev_io_type type, struct file_disk *fdisk,
 static int
 bdev_aio_submit_io(enum spdk_bdev_io_type type, struct file_disk *fdisk,
 		   struct spdk_io_channel *ch, struct bdev_aio_task *aio_task,
-		   struct iovec *iov, int iovcnt, uint64_t nbytes, uint64_t offset)
+		   struct iovec *iov, int iovcnt, uint64_t nbytes, uint64_t offset,
+		   bool sync_io)
 {
 	struct iocb *iocb = &aio_task->iocb;
 	struct bdev_aio_io_channel *aio_ch = spdk_io_channel_get_ctx(ch);
@@ -191,7 +193,11 @@ bdev_aio_submit_io(enum spdk_bdev_io_type type, struct file_disk *fdisk,
 	if (type == SPDK_BDEV_IO_TYPE_READ) {
 		io_prep_preadv(iocb, fdisk->fd, iov, iovcnt, offset);
 	} else {
-		io_prep_pwritev(iocb, fdisk->fd, iov, iovcnt, offset);
+		if (sync_io) {
+			io_prep_pwritev2(iocb, fdisk->fd, iov, iovcnt, offset, RWF_DSYNC);
+		} else {
+			io_prep_pwritev(iocb, fdisk->fd, iov, iovcnt, offset);
+		}
 	}
 
 	if (aio_ch->group_ch->efd >= 0) {
@@ -208,7 +214,8 @@ bdev_aio_submit_io(enum spdk_bdev_io_type type, struct file_disk *fdisk,
 static void
 bdev_aio_rw(enum spdk_bdev_io_type type, struct file_disk *fdisk,
 	    struct spdk_io_channel *ch, struct bdev_aio_task *aio_task,
-	    struct iovec *iov, int iovcnt, uint64_t nbytes, uint64_t offset)
+	    struct iovec *iov, int iovcnt, uint64_t nbytes, uint64_t offset, 
+		bool sync_io)
 {
 	struct bdev_aio_io_channel *aio_ch = spdk_io_channel_get_ctx(ch);
 	int rc;
@@ -221,7 +228,7 @@ bdev_aio_rw(enum spdk_bdev_io_type type, struct file_disk *fdisk,
 			      iovcnt, nbytes, offset);
 	}
 
-	rc = bdev_aio_submit_io(type, fdisk, ch, aio_task, iov, iovcnt, nbytes, offset);
+	rc = bdev_aio_submit_io(type, fdisk, ch, aio_task, iov, iovcnt, nbytes, offset, sync_io);
 	if (spdk_unlikely(rc < 0)) {
 		if (rc == -EAGAIN) {
 			SPDK_DEBUGLOG(aio, "io_submit returned -EAGAIN\n");
@@ -239,6 +246,8 @@ static void
 bdev_aio_flush(struct file_disk *fdisk, struct bdev_aio_task *aio_task)
 {
 	struct spdk_bdev_io *bdev_io = spdk_bdev_io_from_ctx(aio_task);
+	// We can use sync_file_range syscall but there are limitations since it doesn't
+	// flush metadata of the file
 	int rc = fsync(fdisk->fd);
 
 	if (rc == 0) {
@@ -589,7 +598,8 @@ bdev_aio_get_buf_cb(struct spdk_io_channel *ch, struct spdk_bdev_io *bdev_io,
 			    bdev_io->u.bdev.iovs,
 			    bdev_io->u.bdev.iovcnt,
 			    bdev_io->u.bdev.num_blocks * bdev_io->bdev->blocklen,
-			    bdev_io->u.bdev.offset_blocks * bdev_io->bdev->blocklen);
+			    bdev_io->u.bdev.offset_blocks * bdev_io->bdev->blocklen,
+				spdk_bdev_io_get_fua(bdev_io));
 		break;
 	default:
 		SPDK_ERRLOG("Wrong io type\n");
