@@ -1668,6 +1668,26 @@ int spdk_bdev_comparev_and_writev_blocks(struct spdk_bdev_desc *desc, struct spd
 		uint64_t offset_blocks, uint64_t num_blocks,
 		spdk_bdev_io_completion_cb cb, void *cb_arg);
 
+typedef void (*spdk_bdev_io_overlap_cb)(void *cb_arg, bool overlap_found);
+/**
+ * Check if the given range of blocks overlaps with any other I/O requests.
+ * This function is used to check if the given I/O request overlaps with any
+ * other I/O requests that are currently in progress. If an overlap is found,
+ * the callback function will be called with overlap_found set to true. If no
+ * overlap is found, the callback function will be called with overlap_found
+ * set to false.
+ *
+ * \param io I/O request to check for overlap.
+ * \param cb_fn Callback function to call when the check is complete.
+ * \param cb_arg Argument to pass to the callback function.
+ *
+ * \return 0 on success. On success, the callback will always be called. Return
+ * negated errno on failure, in which case the callback will not be called.
+ *
+ */
+void spdk_bdev_io_range_overlaps_submitted_io(struct spdk_bdev_io *io,
+                      spdk_bdev_io_overlap_cb cb_fn, void *cb_arg);
+
 /**
  * Submit a request to acquire a data buffer that represents the given
  * range of blocks. The data buffer is placed in the spdk_bdev_io structure

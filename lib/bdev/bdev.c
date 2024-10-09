@@ -6206,6 +6206,79 @@ spdk_bdev_comparev_and_writev_blocks(struct spdk_bdev_desc *desc, struct spdk_io
 				   bdev_comparev_and_writev_blocks_locked, bdev_io);
 }
 
+struct spdk_bdev_io_overlap_ctx {
+    struct spdk_bdev *bdev;
+    struct spdk_bdev_io *check_io;
+    spdk_bdev_io_overlap_cb cb_fn;
+    void *cb_arg;
+};
+
+static void
+bdev_io_overlap_check_channel(struct spdk_io_channel_iter *i)
+{
+    struct spdk_io_channel *ch = spdk_io_channel_iter_get_channel(i);
+    struct spdk_bdev_io_overlap_ctx *ctx = spdk_io_channel_iter_get_ctx(i);
+    struct spdk_bdev_channel *bdev_ch = spdk_io_channel_get_ctx(ch);
+    struct spdk_bdev_io *bdev_io;
+	struct lba_range given_range, range;
+	int status = 0;
+	given_range.offset = ctx->check_io->u.bdev.offset_blocks;
+	given_range.length = ctx->check_io->u.bdev.num_blocks;
+
+    TAILQ_FOREACH(bdev_io, &bdev_ch->io_submitted, internal.ch_link) {
+        if (bdev_io == ctx->check_io) {
+            continue;
+        }
+        switch (bdev_io->type) {
+			case SPDK_BDEV_IO_TYPE_WRITE:
+			case SPDK_BDEV_IO_TYPE_UNMAP:
+			case SPDK_BDEV_IO_TYPE_WRITE_ZEROES:
+			case SPDK_BDEV_IO_TYPE_ZCOPY:
+				range.offset = bdev_io->u.bdev.offset_blocks;
+				range.length = bdev_io->u.bdev.num_blocks;
+
+				if (bdev_lba_range_overlapped(&given_range, &range)) {
+					status = 1;
+					break;
+				}
+        }
+    }
+
+    spdk_for_each_channel_continue(i, status);
+}
+
+static void
+bdev_io_overlap_check_cb(struct spdk_io_channel_iter *i, int status)
+{
+    struct spdk_bdev_io_overlap_ctx *ctx = spdk_io_channel_iter_get_ctx(i);
+
+    ctx->cb_fn(ctx->cb_arg, status != 0);
+
+    free(ctx);
+}
+
+void
+spdk_bdev_io_range_overlaps_submitted_io(struct spdk_bdev_io *io,
+                      spdk_bdev_io_overlap_cb cb_fn, void *cb_arg)
+{
+	struct spdk_bdev *bdev = io->bdev;
+    struct spdk_bdev_io_overlap_ctx *ctx;
+
+    ctx = calloc(1, sizeof(*ctx));
+    if (!ctx) {
+        cb_fn(cb_arg, false);
+        return;
+    }
+
+    ctx->bdev = bdev;
+    ctx->check_io = io;
+    ctx->cb_fn = cb_fn;
+    ctx->cb_arg = cb_arg;
+
+    spdk_for_each_channel(__bdev_to_io_dev(bdev), bdev_io_overlap_check_channel, ctx,
+                          bdev_io_overlap_check_cb);
+}
+
 int
 spdk_bdev_zcopy_start(struct spdk_bdev_desc *desc, struct spdk_io_channel *ch,
 		      struct iovec *iov, int iovcnt,

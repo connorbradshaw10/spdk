@@ -4204,6 +4204,159 @@ bdev_write_zeroes(void)
 }
 
 static void
+assert_overlap_detected(void *arg, bool overlap_detected) {
+	CU_ASSERT(overlap_detected);
+}
+
+static void
+assert_overlap_not_detected(void *arg, bool overlap_detected) {
+	CU_ASSERT(!overlap_detected);
+}
+
+static void
+bdev_io_range_overlaps_submitted_io(void)
+{
+	struct spdk_bdev *bdev;
+	struct spdk_bdev_desc *desc = NULL;
+	struct spdk_io_channel *io_ch = NULL;
+	struct spdk_bdev_channel *bdev_ch = NULL;
+
+	spdk_bdev_initialize(bdev_init_cb, NULL);
+
+	bdev = allocate_bdev("bdev");
+
+	CU_ASSERT(spdk_bdev_open_ext("bdev", true, bdev_ut_event_cb, NULL, &desc) == 0);
+	SPDK_CU_ASSERT_FATAL(desc != NULL);
+	CU_ASSERT(bdev == spdk_bdev_desc_get_bdev(desc));
+
+	io_ch = spdk_bdev_get_io_channel(desc);
+	CU_ASSERT(io_ch != NULL);
+
+	bdev_ch = spdk_io_channel_get_ctx(io_ch);
+	CU_ASSERT(TAILQ_EMPTY(&bdev_ch->io_submitted));
+
+	/* Testcase 1
+	 * We will write two IOs that dont overlap
+	 */
+	CU_ASSERT(spdk_bdev_write(desc, io_ch, (void *)0x1000, 0, 4096, io_done, NULL) == 0);
+	CU_ASSERT(spdk_bdev_write(desc, io_ch, (void *)0x1000, 4096, 4096, io_done, NULL) == 0);
+
+	// Get the first IO
+	struct spdk_bdev_io *io = TAILQ_FIRST(&bdev_ch->io_submitted);
+
+	// Start the overlap check and poll
+	spdk_bdev_io_range_overlaps_submitted_io(io, assert_overlap_not_detected, NULL);
+	poll_threads();
+
+	// Complete the IOs for next testcase
+	stub_complete_io(1);
+	stub_complete_io(1);
+
+	/*
+	* Testcase 2
+	* We will write two IOs such that IO1 overlaps with IO2 on its first block
+	*/
+	CU_ASSERT(spdk_bdev_write(desc, io_ch, (void *)0x1000, 3584, 4096, io_done, NULL) == 0);
+	CU_ASSERT(spdk_bdev_write(desc, io_ch, (void *)0x2000, 0, 4096, io_done, NULL) == 0);
+
+	io = TAILQ_FIRST(&bdev_ch->io_submitted);
+	spdk_bdev_io_range_overlaps_submitted_io(io, assert_overlap_detected, NULL);
+	poll_threads();
+
+	stub_complete_io(1);
+	stub_complete_io(1);
+
+	/*
+	* Testcase 3
+	* We will write two IOs such that IO1 overlaps with IO2 on its last block
+	*/
+	CU_ASSERT(spdk_bdev_write(desc, io_ch, (void *)0x1000, 0, 4096, io_done, NULL) == 0);
+	CU_ASSERT(spdk_bdev_write(desc, io_ch, (void *)0x2000, 3584, 4096, io_done, NULL) == 0);
+
+	io = TAILQ_FIRST(&bdev_ch->io_submitted);
+	spdk_bdev_io_range_overlaps_submitted_io(io, assert_overlap_detected, NULL);
+	poll_threads();
+
+	stub_complete_io(1);
+	stub_complete_io(1);
+
+	/*
+	* Testcase 4
+	* We will write two IOs such that IO1 overlaps with IO2 on its last set of blocks
+	*/
+	CU_ASSERT(spdk_bdev_write(desc, io_ch, (void *)0x1000, 0, 4096, io_done, NULL) == 0);
+	CU_ASSERT(spdk_bdev_write(desc, io_ch, (void *)0x2000, 3072, 4096, io_done, NULL) == 0);
+
+	io = TAILQ_FIRST(&bdev_ch->io_submitted);
+	spdk_bdev_io_range_overlaps_submitted_io(io, assert_overlap_detected, NULL);
+	poll_threads();
+
+	stub_complete_io(1);
+	stub_complete_io(1);
+
+	/*
+	* Testcase 5
+	* We will write two IOs such that IO1 overlaps with IO2 on its first set of blocks
+	*/
+	CU_ASSERT(spdk_bdev_write(desc, io_ch, (void *)0x1000, 3072, 4096, io_done, NULL) == 0);
+	CU_ASSERT(spdk_bdev_write(desc, io_ch, (void *)0x2000, 0, 4096, io_done, NULL) == 0);
+
+	io = TAILQ_FIRST(&bdev_ch->io_submitted);
+	spdk_bdev_io_range_overlaps_submitted_io(io, assert_overlap_detected, NULL);
+	poll_threads();
+
+	stub_complete_io(1);
+	stub_complete_io(1);
+
+	/*
+	* Testcase 6
+	* We will write two IOs such that IO1 is within IO2
+	*/
+	CU_ASSERT(spdk_bdev_write(desc, io_ch, (void *)0x1000, 1536, 1024, io_done, NULL) == 0);
+	CU_ASSERT(spdk_bdev_write(desc, io_ch, (void *)0x2000, 0, 4096, io_done, NULL) == 0);
+
+	io = TAILQ_FIRST(&bdev_ch->io_submitted);
+	spdk_bdev_io_range_overlaps_submitted_io(io, assert_overlap_detected, NULL);
+	poll_threads();
+
+	stub_complete_io(1);
+	stub_complete_io(1);
+
+	/*
+	* Testcase 7
+	* We will write two IOs such that IO2 is within IO1
+	*/
+	CU_ASSERT(spdk_bdev_write(desc, io_ch, (void *)0x1000, 0, 4096, io_done, NULL) == 0);
+	CU_ASSERT(spdk_bdev_write(desc, io_ch, (void *)0x2000, 1536, 1024, io_done, NULL) == 0);
+
+	io = TAILQ_FIRST(&bdev_ch->io_submitted);
+	spdk_bdev_io_range_overlaps_submitted_io(io, assert_overlap_detected, NULL);
+	poll_threads();
+
+	stub_complete_io(1);
+	stub_complete_io(1);
+
+	/* Testcase 8
+	 * We will write two IOs that dont overlap
+	 */
+	CU_ASSERT(spdk_bdev_write(desc, io_ch, (void *)0x1000, 4096, 4096, io_done, NULL) == 0);
+	CU_ASSERT(spdk_bdev_write(desc, io_ch, (void *)0x1000, 0, 4096, io_done, NULL) == 0);
+
+	io = TAILQ_FIRST(&bdev_ch->io_submitted);
+	spdk_bdev_io_range_overlaps_submitted_io(io, assert_overlap_not_detected, NULL);
+	poll_threads();
+
+	stub_complete_io(1);
+	stub_complete_io(1);
+
+	spdk_put_io_channel(io_ch);
+	spdk_bdev_close(desc);
+	free_bdev(bdev);
+	spdk_bdev_finish(bdev_fini_cb, NULL);
+	poll_threads();
+}
+
+static void
 bdev_zcopy_write(void)
 {
 	struct spdk_bdev *bdev;
