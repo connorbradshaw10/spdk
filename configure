@@ -112,6 +112,8 @@ function usage() {
 	echo " --without-uring-zns       Build I/O uring module without ZNS (zoned namespaces) support."
 	echo " --with-openssl[=DIR]      Build OPENSSL with custom path. Otherwise the regular system paths will"
 	echo "                           be searched."
+	echo " --with-xfs                Build with specializations for XFS file systems."
+	echo " --without-xfs             No path required."
 	echo " --with-fuse               Build FUSE components for mounting a blobfs filesystem."
 	echo " --without-fuse            No path required."
 	echo " --with-nvme-cuse          Build NVMe driver with support for CUSE-based character devices."
@@ -619,6 +621,11 @@ for i in "$@"; do
 		--with-openssl=*)
 			check_dir "$i"
 			CONFIG[OPENSSL_PATH]=$(readlink -f ${i#*=})
+		--with-xfs)
+			CONFIG[XFS]=y
+			;;
+		--without-xfs)
+			CONFIG[XFS]=n
 			;;
 		--with-fuse)
 			CONFIG[FUSE]=y
@@ -1197,6 +1204,15 @@ if [[ "${CONFIG[URING]}" = "y" || "${CONFIG[XNVME]}" = "y" ]]; then
 			echo "Disabling Zoned NS support in Uring! Requires blkzoned.h from kernel >= linux-5.9."
 			CONFIG[URING_ZNS]=n
 		fi
+	fi
+fi
+
+if [[ "${CONFIG[XFS]}" = "y" ]]; then
+	if ! echo -e '#include <sys/types.h>\n#include <xfs/handle.h>\nint main(void) { return 0; }\n' \
+		| "${BUILD_CMD[@]}" -lhandle - 2> /dev/null; then
+		echo "--with-xfs requires libhandle from xfsprogs-dev."
+		echo "Please install then re-run this script."
+		exit 1
 	fi
 fi
 

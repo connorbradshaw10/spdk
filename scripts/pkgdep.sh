@@ -27,6 +27,7 @@ function usage() {
 	echo "  -A --avahi                  Additional dependencies for Avahi mDNS Discovery"
 	echo "  -G --golang                 Additional dependencies for go API generation"
 	echo "  -I --idxd                   Additional dependencies for IDXD"
+	echo "  -x --xfs                    Additional dependencies for XFS specializations"
 	echo ""
 	exit 0
 }
@@ -38,10 +39,14 @@ function install_all_dependencies() {
 	INSTALL_RDMA=true
 	INSTALL_DOCS=true
 	INSTALL_LIBURING=true
+<<<<<<< HEAD
 	INSTALL_DAOS=true
 	INSTALL_AVAHI=true
 	INSTALL_GOLANG=true
 	INSTALL_IDXD=true
+=======
+	INSTALL_XFSLIBS=true
+>>>>>>> 4eef39e35 (perf(bdev/uring): open supported files via XFS handles)
 }
 
 INSTALL_CRYPTO=false
@@ -51,6 +56,7 @@ INSTALL_RBD=false
 INSTALL_RDMA=false
 INSTALL_DOCS=false
 INSTALL_LIBURING=false
+<<<<<<< HEAD
 INSTALL_DAOS=false
 INSTALL_AVAHI=false
 INSTALL_GOLANG=false
@@ -58,6 +64,11 @@ INSTALL_IDXD=false
 INSTALL_UADK=false
 
 while getopts 'abdfhipruADGIR-:' optchar; do
+=======
+INSTALL_XFSLIBS=false
+
+while getopts 'abdfhiprux-:' optchar; do
+>>>>>>> 4eef39e35 (perf(bdev/uring): open supported files via XFS handles)
 	case "$optchar" in
 		-)
 			case "$OPTARG" in
@@ -69,11 +80,15 @@ while getopts 'abdfhipruADGIR-:' optchar; do
 				rdma) INSTALL_RDMA=true ;;
 				docs) INSTALL_DOCS=true ;;
 				uring) INSTALL_LIBURING=true ;;
+<<<<<<< HEAD
 				uadk) INSTALL_UADK=true ;;
 				daos) INSTALL_DAOS=true ;;
 				avahi) INSTALL_AVAHI=true ;;
 				golang) INSTALL_GOLANG=true ;;
 				idxd) INSTALL_IDXD=true ;;
+=======
+				xfs) INSTALL_XFSLIBS=true ;;
+>>>>>>> 4eef39e35 (perf(bdev/uring): open supported files via XFS handles)
 				*)
 					echo "Invalid argument '$OPTARG'"
 					usage
@@ -88,10 +103,14 @@ while getopts 'abdfhipruADGIR-:' optchar; do
 		r) INSTALL_RDMA=true ;;
 		b) INSTALL_DOCS=true ;;
 		u) INSTALL_LIBURING=true ;;
+<<<<<<< HEAD
 		D) INSTALL_DAOS=true ;;
 		A) INSTALL_AVAHI=true ;;
 		G) INSTALL_GOLANG=true ;;
 		I) INSTALL_IDXD=true ;;
+=======
+		x) INSTALL_XFSLIBS=true ;;
+>>>>>>> 4eef39e35 (perf(bdev/uring): open supported files via XFS handles)
 		*)
 			echo "Invalid argument '$OPTARG'"
 			usage

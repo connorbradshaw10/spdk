@@ -62,4 +62,7 @@ if [[ $INSTALL_IDXD == "true" ]]; then
 	else
 		echo "libaccel-config is only present on Ubuntu 23.04 or higher."
 	fi
+if [[ $INSTALL_XFSLIBS == "true" ]]; then
+	# Additional dependencies for XFS specialization
+	apt-get install -y xfslibs-dev
 fi

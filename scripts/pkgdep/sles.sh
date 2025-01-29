@@ -42,4 +42,7 @@ fi
 if [[ $INSTALL_AVAHI == "true" ]]; then
 	# Additional dependencies for Avahi
 	zypper install -y avahi-devel
+if [[ $INSTALL_XFSLIBS == "true" ]]; then
+	# Additional dependencies for XFS specialization
+	zypper install -y xfslibs-dev
 fi

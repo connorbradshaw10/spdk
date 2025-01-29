@@ -13,6 +13,10 @@ C_SRCS = bdev_uring.c bdev_uring_rpc.c
 LIBNAME = bdev_uring
 LOCAL_SYS_LIBS = -luring
 
+ifeq ($(CONFIG_XFS),y)
+LOCAL_SYS_LIBS += -lhandle
+endif
+
 ifneq ($(strip $(CONFIG_URING_PATH)),)
 CFLAGS += -I$(CONFIG_URING_PATH)
 LDFLAGS += -L$(CONFIG_URING_PATH)

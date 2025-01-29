@@ -25,6 +25,10 @@
 #define SECTOR_SHIFT 9
 #endif
 
+#ifdef SPDK_CONFIG_XFS
+#include <xfs/handle.h>
+#endif /* SPDK_CONFIG_XFS */
+
 struct bdev_uring_zoned_dev {
 	uint64_t		num_zones;
 	uint32_t		zone_shift;
@@ -83,18 +87,51 @@ static int
 bdev_uring_open(struct bdev_uring *bdev)
 {
 	int fd;
+	const char *errfunc;
+
+#ifdef SPDK_CONFIG_XFS
+	void * handle;
+	size_t hsize;
+
+	// Opening a file via XFS handle sets FMODE_NOCMTIME, which prevents modification and change timestamps from being updated on writes for higher performance.
+	if (path_to_handle(bdev->filename, &handle, &hsize) == 0) {
+		fd = open_by_handle(handle, hsize, O_RDWR | O_DIRECT | O_NOATIME);
+		free_handle(handle, hsize);
+		if (spdk_unlikely(fd < 0)) {
+			errfunc = "open_by_handle";
+			goto error_return;
+		}
+		bdev->fd = fd;
+		return 0;
+	}
+	switch (errno) {
+	case EINVAL:
+		SPDK_DEBUGLOG(uring, "file %s is in a filesystem that does not support opening via handle\n", bdev->filename);
+		break;
+	case EBADF:
+		SPDK_DEBUGLOG(uring, "%s is a type of file that does not support opening via handle\n", bdev->filename);
+		break;
+	default:
+		errfunc = "path_to_handle";
+		goto error_return;
+	}
+#endif
 
 	fd = open(bdev->filename, O_RDWR | O_DIRECT | O_NOATIME);
-	if (fd < 0) {
-		SPDK_ERRLOG("open() failed (file:%s), errno %d: %s\n",
-				bdev->filename, errno, spdk_strerror(errno));
-		bdev->fd = -1;
-		return -1;
+	if (spdk_unlikely(fd < 0)) {
+		errfunc = "open";
+		goto error_return;
 	}
 
 	bdev->fd = fd;
 
 	return 0;
+
+error_return:
+	SPDK_ERRLOG("%s() failed (file:%s), errno %d: %s\n",
+			errfunc, bdev->filename, errno, spdk_strerror(errno));
+	bdev->fd = -1;
+	return -1;
 }
 
 static void

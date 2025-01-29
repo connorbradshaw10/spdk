@@ -217,4 +217,7 @@ if [[ $INSTALL_IDXD == "true" ]]; then
 	else
 		yum install -y accel-config-devel
 	fi
+if [[ $INSTALL_XFSLIBS == "true" ]]; then
+	# Additional dependencies for XFS specialization
+	yum install -y xfsprogs-devel
 fi

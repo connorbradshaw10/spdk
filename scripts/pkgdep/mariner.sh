@@ -50,6 +50,10 @@ additional_dependencies() {
 		# Additional dependencies for Avahi
 		tdnf install -y avahi-devel
 	fi
+	if [[ $INSTALL_XFSLIBS == "true" ]]; then
+		# Additional dependencies for XFS specialization
+		tdnf install -y xfsprogs-devel
+	fi
 }
 
 tdnf install -y ca-certificates build-essential

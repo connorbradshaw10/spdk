@@ -185,6 +185,8 @@ CONFIG_URING_PATH=
 
 # Path to custom built OPENSSL library
 CONFIG_OPENSSL_PATH=
+# Build with XFS specialization support
+CONFIG_XFS=n
 
 # Build with FUSE support
 CONFIG_FUSE=n

@@ -175,6 +175,11 @@ SYS_LIBS += -lavahi-common -lavahi-client
 endif
 
 IPSEC_MB_DIR=$(CONFIG_IPSEC_MB_DIR)
+ifeq ($(CONFIG_XFS),y)
+SYS_LIBS += -lhandle
+endif
+
+IPSEC_MB_DIR=$(SPDK_ROOT_DIR)/intel-ipsec-mb/lib
 
 ISAL_DIR=$(SPDK_ROOT_DIR)/isa-l
 ISAL_CRYPTO_DIR=$(SPDK_ROOT_DIR)/isa-l-crypto
