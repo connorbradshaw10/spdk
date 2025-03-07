@@ -227,16 +227,6 @@ vbdev_lvs_create_with_uuid(const char *base_bdev_name, const char *name, const c
 			   uint32_t num_md_pages_per_cluster_ratio,
 			   spdk_lvs_op_with_handle_complete cb_fn, void *cb_arg)
 {
-	/* set uuid as NULL */
-	return vbdev_lvs_create_with_uuid(base_bdev_name, name, NULL, cluster_sz, clear_method, cb_fn,
-					  cb_arg);
-}
-
-int
-vbdev_lvs_create_with_uuid(const char *base_bdev_name, const char *name, const char *uuid,
-			   uint32_t cluster_sz,
-			   enum lvs_clear_method clear_method, spdk_lvs_op_with_handle_complete cb_fn, void *cb_arg)
-{
 	struct spdk_bs_dev *bs_dev;
 	struct spdk_lvs_with_handle_req *lvs_req;
 	struct spdk_lvs_opts opts;
@@ -1828,7 +1818,6 @@ _vbdev_lvs_examine_cb(void *arg, struct spdk_lvol_store *lvol_store, int lvserrn
 	}
 
 end:
-	req->cb_fn(req->cb_arg, lvol_store, lvserrno);
 	free(req);
 }
 
@@ -1853,7 +1842,7 @@ _vbdev_lvs_examine(struct spdk_bdev *bdev, struct spdk_lvs_req *ori_req,
 		SPDK_INFOLOG(vbdev_lvol, "Cannot create bs dev on %s\n", bdev->name);
 		_vbdev_lvs_examine_done(ori_req, rc);
 		free(req);
-		return -1;
+		return;
 	}
 
 	req->base_bdev = bdev;

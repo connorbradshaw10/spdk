@@ -316,8 +316,6 @@ spdk_sock_connect_ext(const char *ip, int port, const char *_impl_name, struct s
 	struct spdk_sock *sock;
 	struct spdk_sock_opts opts_local;
 	const char *impl_name = NULL;
-	struct spdk_sock_impl_opts impl_opts = {};
-	size_t len;
 
 	if (opts == NULL) {
 		SPDK_ERRLOG("the opts should not be NULL pointer\n");

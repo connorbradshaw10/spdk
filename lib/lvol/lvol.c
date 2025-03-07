@@ -1117,10 +1117,6 @@ lvol_create_open_cb(void *cb_arg, struct spdk_blob *blob, int lvolerrno)
 		 */
 		abort();
 	}
-<<<<<<< HEAD
-
-=======
->>>>>>> 418f539aa (Set bdev name to lvol's name instead of uuid which is randomly generated)
 	lvol->ref_count++;
 
 	assert(req->cb_fn != NULL);

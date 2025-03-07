@@ -621,6 +621,7 @@ for i in "$@"; do
 		--with-openssl=*)
 			check_dir "$i"
 			CONFIG[OPENSSL_PATH]=$(readlink -f ${i#*=})
+			;;
 		--with-xfs)
 			CONFIG[XFS]=y
 			;;

@@ -22,7 +22,6 @@
 #include "spdk/log.h"
 
 #include <sys/eventfd.h>
-#include <linux/aio_abi.h>
 
 #ifndef __FreeBSD__
 #include <libaio.h>

@@ -144,12 +144,8 @@ DEFINE_STUB(spdk_bdev_flush_blocks, int, (struct spdk_bdev_desc *desc, struct sp
 		void *cb_arg), 0);
 DEFINE_STUB_V(spdk_rpc_register_method, (const char *method, spdk_rpc_method_handler func,
 		void *ctx, uint32_t state_mask));
-<<<<<<< HEAD
 DEFINE_STUB_V(spdk_rpc_no_ctx_wrapper, (struct spdk_jsonrpc_request *request,
 					const struct spdk_json_val *params, void *ctx));
-=======
-DEFINE_STUB_V(spdk_rpc_register_alias_deprecated, (const char *method, const char *alias));
->>>>>>> 2fcf932d6 (Allow method handler to accept one void pointer context parameter)
 DEFINE_STUB_V(spdk_jsonrpc_end_result, (struct spdk_jsonrpc_request *request,
 					struct spdk_json_write_ctx *w));
 DEFINE_STUB_V(spdk_jsonrpc_send_bool_response, (struct spdk_jsonrpc_request *request,
@@ -177,7 +173,6 @@ DEFINE_STUB(spdk_json_write_named_uint64, int, (struct spdk_json_write_ctx *w, c
 DEFINE_STUB(spdk_strerror, const char *, (int errnum), NULL);
 DEFINE_STUB(spdk_bdev_queue_io_wait, int, (struct spdk_bdev *bdev, struct spdk_io_channel *ch,
 		struct spdk_bdev_io_wait_entry *entry), 0);
-<<<<<<< HEAD
 DEFINE_STUB(spdk_bdev_get_memory_domains, int, (struct spdk_bdev *bdev,
 		struct spdk_memory_domain **domains,	int array_size), 0);
 DEFINE_STUB(spdk_bdev_get_name, const char *, (const struct spdk_bdev *bdev), "test_bdev");
@@ -228,10 +223,6 @@ spdk_bdev_get_uuid(const struct spdk_bdev *bdev)
 {
 	return &bdev->uuid;
 }
-=======
-DEFINE_STUB_V(spdk_rpc_no_ctx_wrapper, (struct spdk_jsonrpc_request *request,
-					const struct spdk_json_val *params, void *ctx));
->>>>>>> 2fcf932d6 (Allow method handler to accept one void pointer context parameter)
 
 struct spdk_io_channel *
 spdk_bdev_get_io_channel(struct spdk_bdev_desc *desc)

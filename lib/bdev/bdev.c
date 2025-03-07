@@ -10596,6 +10596,8 @@ spdk_bdev_copy_blocks(struct spdk_bdev_desc *desc, struct spdk_io_channel *ch,
 	spdk_bdev_io_get_buf(bdev_io, bdev_copy_get_buf_cb, num_blocks * spdk_bdev_get_block_size(bdev));
 
 	return 0;
+}
+
 bool
 spdk_bdev_io_get_fua(struct spdk_bdev_io *bdev_io) {
 	return (bdev_io->u.bdev.nvme_cdw12.raw & SPDK_NVME_IO_FLAGS_FORCE_UNIT_ACCESS) ? true : false;
